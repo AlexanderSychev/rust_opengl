@@ -67,11 +67,18 @@ fn main() {
         gl.bind_buffer(glow::ARRAY_BUFFER, Some(position_buffer));
         gl.vertex_attrib_pointer_f32(0, 3, glow::FLOAT, false, 0, 0);
 
-        // Закрепить индекс 0 за буфером с координатами
+        // Закрепить индекс 1 за буфером с цветами
         gl.bind_buffer(glow::ARRAY_BUFFER, Some(color_buffer));
         gl.vertex_attrib_pointer_f32(1, 3, glow::FLOAT, false, 0, 0);
 
         let program = gl.create_program().expect("Cannot create program");
+
+        // Привязать индексы к входным переменным вершинного шейдера (вместо "layout (location = <index>)")
+        gl.bind_attrib_location(program, 0, "vertex_position");
+        gl.bind_attrib_location(program, 1, "vertex_color");
+
+        // Привязать индекс в выходной переменной фрагментного шейдера (вместо "layout (location = <index>)")
+        gl.bind_frag_data_location(program, 0, "frag_color");
 
         let (vertex_shader_source, fragment_shader_source) = {
             use std::fs::read_to_string;
@@ -122,7 +129,7 @@ fn main() {
                 return;
             }
             Event::MainEventsCleared => {
-                // gl.clear(glow::COLOR_BUFFER_BIT);
+                gl.clear(glow::COLOR_BUFFER_BIT);
                 gl.bind_vertex_array(Some(vertex_array));
                 gl.draw_arrays(glow::TRIANGLES, 0, 3);
 

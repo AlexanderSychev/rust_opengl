@@ -1,7 +1,7 @@
 #version 430
 
-layout (location = 0) in vec3 vertex_position;
-layout (location = 1) in vec3 vertex_color;
+in vec3 vertex_position;
+in vec3 vertex_color;
 
 out vec3 color;
 
