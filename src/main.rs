@@ -13,6 +13,8 @@ fn main() {
     // Цвета вершин треугольника (в нормализованной форме)
     let colors_data: Vec<f32> = vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
 
+    let mut angle: f32 = 0.0;
+
     unsafe {
         let (gl, window, event_loop) = {
             let event_loop = glutin::event_loop::EventLoop::new();
@@ -145,7 +147,25 @@ fn main() {
                 return;
             }
             Event::MainEventsCleared => {
+                angle += 0.0174533;
                 gl.clear(glow::COLOR_BUFFER_BIT);
+
+                if let Some(uniform) = gl.get_uniform_location(program, "rotation_matrix") {
+                    use nalgebra_glm::{rotate, mat4, vec3};
+                    let rotation_matrix = rotate(
+                        &mat4::<f32>(
+                            1.0, 0.0, 0.0, 0.0,
+                            0.0, 1.0, 0.0, 0.0,
+                            0.0, 0.0, 1.0, 0.0,
+                            0.0, 0.0, 0.0, 1.0,
+                        ),
+                        angle,
+                        &vec3::<f32>(0.0, 0.0, 1.0),
+                    );
+
+                    gl.uniform_matrix_4_f32_slice(Some(&uniform), false, rotation_matrix.as_slice());
+                }
+
                 gl.bind_vertex_array(Some(vertex_array));
                 gl.draw_arrays(glow::TRIANGLES, 0, 3);
 
