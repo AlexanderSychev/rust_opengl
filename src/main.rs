@@ -113,6 +113,22 @@ fn main() {
             panic!("{}", gl.get_program_info_log(program));
         }
 
+        // Получить число входных атрибутов
+        let num_attribs = gl.get_active_attributes(program);
+        println!("Active attributes count: {}", num_attribs);
+
+        // Вывести все найденные атрибуты
+        if num_attribs > 0 {
+            for i in 0..num_attribs {
+                let maybe_attr = gl.get_active_attribute(program, i);
+                if let Some(attr) = maybe_attr {
+                    println!("#{} - \"{}\" {}", i, attr.name, attr.size);
+                } else {
+                    println!("#{} - None", i);
+                }
+            }
+        }
+
         for shader in shaders {
             gl.detach_shader(program, shader);
             gl.delete_shader(shader);
