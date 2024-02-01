@@ -120,14 +120,26 @@ fn main() {
         println!("Active attributes count: {}", num_attribs);
 
         // Вывести все найденные атрибуты
-        if num_attribs > 0 {
-            for i in 0..num_attribs {
-                let maybe_attr = gl.get_active_attribute(program, i);
-                if let Some(attr) = maybe_attr {
-                    println!("#{} - \"{}\" {}", i, attr.name, attr.size);
-                } else {
-                    println!("#{} - None", i);
-                }
+        for i in 0..num_attribs {
+            let maybe_attr = gl.get_active_attribute(program, i);
+            if let Some(attr) = maybe_attr {
+                println!("#{} - \"{}\" {}", i, attr.name, attr.size);
+            } else {
+                println!("#{} - None", i);
+            }
+        }
+
+        // Получить число всех uniform-переменных
+        let num_uniforms = gl.get_active_uniforms(program);
+        println!("Uniforms count: {}", num_uniforms);
+
+        // Вывести все найденные uniform-переменные
+        for i in 0..num_uniforms {
+            let maybe_uniform = gl.get_active_uniform(program, i);
+            if let Some(uniform) = maybe_uniform {
+                println!("#{} - \"{}\" {}", i, uniform.name, uniform.size);
+            } else {
+                println!("#{} - None", i);
             }
         }
 
