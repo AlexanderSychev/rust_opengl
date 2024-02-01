@@ -7,11 +7,21 @@ mod metadata;
 fn main() {
     use bytemuck::cast_slice;
 
-    // Координаты вершин треугольника (в нормализованной форме)
-    let position_data: Vec<f32> = vec![-0.8, -0.8, 0.0, 0.8, -0.8, 0.0, 0.0, 0.8, 0.0];
+    // Координаты вершин квадрата (в нормализованной форме)
+    let position_data: Vec<f32> = vec![
+        -0.5, -0.5, 0.0,
+        -0.5, 0.5, 0.0,
+        0.5, -0.5, 0.0,
+        0.5, 0.5, 0.0,
+    ];
 
-    // Цвета вершин треугольника (в нормализованной форме)
-    let colors_data: Vec<f32> = vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+    // Цвета вершин квадрата (в нормализованной форме)
+    let colors_data: Vec<f32> = vec![
+        1.0, 0.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 1.0,
+        0.5, 0.5, 0.5,
+    ];
 
     let mut angle: f32 = 0.0;
 
@@ -180,6 +190,7 @@ fn main() {
 
                 gl.bind_vertex_array(Some(vertex_array));
                 gl.draw_arrays(glow::TRIANGLES, 0, 3);
+                gl.draw_arrays(glow::TRIANGLES, 1, 3);
 
                 window.swap_buffers().unwrap();
             }
