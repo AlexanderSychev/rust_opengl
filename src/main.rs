@@ -3,6 +3,40 @@ use glutin;
 use std::sync::Arc;
 
 mod metadata;
+mod log;
+
+/// Блок uniform-переменных в виде структуры
+#[derive(Debug, Clone)]
+struct BlobSettings {
+    outer_color: Vec<f32>,
+    inner_color: Vec<f32>,
+    inner_radius: f32,
+    outer_radius: f32,
+}
+
+impl BlobSettings {
+    /// Преобразовать структуру в срез байтов (для передачи в OpenGL)
+    pub fn as_bytes(&self) -> Vec<u8> {
+        use bytemuck::cast_slice;
+        let mut outer_color = Vec::from(cast_slice::<f32, u8>(&self.outer_color));
+        let mut inner_color = Vec::from(cast_slice::<f32, u8>(&self.inner_color));
+        let mut inner_radius = Vec::from(self.inner_radius.to_be_bytes().as_slice());
+        let mut outer_radius = Vec::from(self.outer_radius.to_be_bytes().as_slice());
+        
+        let mut result = Vec::with_capacity(
+            outer_color.len() +
+            inner_color.len() +
+            inner_radius.len() +
+            outer_radius.len()
+        );
+        result.append(&mut outer_color);
+        result.append(&mut inner_color);
+        result.append(&mut inner_radius);
+        result.append(&mut outer_radius);
+
+        result
+    }
+}
 
 fn main() {
     use bytemuck::cast_slice;
@@ -23,10 +57,16 @@ fn main() {
         0.5, 0.5, 0.5,
     ];
 
-    let mut angle: f32 = 0.0;
+    let blob_settings = BlobSettings {
+        outer_color: vec![0.0f32; 4],
+        inner_color: vec![1.0f32, 1.0f32, 0.75f32, 1.0f32],
+        inner_radius: 0.25,
+        outer_radius: 0.45,
+    };
 
     unsafe {
         let (gl, window, event_loop) = {
+            use log::gl_log_callback;
             let event_loop = glutin::event_loop::EventLoop::new();
             let window_builder = glutin::window::WindowBuilder::new()
                 .with_title("Rust OpenGL Learning Sandbox")
@@ -37,8 +77,16 @@ fn main() {
                 .unwrap()
                 .make_current()
                 .unwrap();
-            let gl =
-                glow::Context::from_loader_function(|s| window.get_proc_address(s) as *const _);
+            let mut gl = glow::Context::from_loader_function(|s| window.get_proc_address(s) as *const _);
+            gl.enable(glow::DEBUG_OUTPUT);
+            gl.debug_message_callback(gl_log_callback);
+            gl.debug_message_control(
+                glow::DONT_CARE,
+                glow::DONT_CARE,
+                glow::DONT_CARE,
+                &vec![],
+                true,
+            );
             (Arc::new(gl), window, event_loop)
         };
 
@@ -84,13 +132,6 @@ fn main() {
         gl.vertex_attrib_pointer_f32(1, 3, glow::FLOAT, false, 0, 0);
 
         let program = gl.create_program().expect("Cannot create program");
-
-        // Привязать индексы к входным переменным вершинного шейдера (вместо "layout (location = <index>)")
-        gl.bind_attrib_location(program, 0, "vertex_position");
-        gl.bind_attrib_location(program, 1, "vertex_color");
-
-        // Привязать индекс в выходной переменной фрагментного шейдера (вместо "layout (location = <index>)")
-        gl.bind_frag_data_location(program, 0, "frag_color");
 
         let (vertex_shader_source, fragment_shader_source) = {
             use std::fs::read_to_string;
@@ -153,6 +194,18 @@ fn main() {
             }
         }
 
+        // Получаем индекс uniform-блока и его размер
+        let block_index = gl.get_uniform_block_index(program, "blob_settings").unwrap();
+        let block_size = gl.get_active_uniform_block_parameter_i32(program, block_index, glow::UNIFORM_BLOCK_DATA_SIZE) as usize;
+        println!("block_size = {}", block_size);
+
+        // Создаем буфферный объект и копируем в него данные
+        let uniform_buffer = gl.create_buffer().ok();
+        gl.bind_buffer(glow::UNIFORM_BUFFER, uniform_buffer);
+        gl.buffer_data_u8_slice(glow::UNIFORM_BUFFER, &blob_settings.as_bytes(), glow::DYNAMIC_DRAW);
+
+        gl.bind_buffer_base(glow::UNIFORM_BUFFER, 0, uniform_buffer);
+
         for shader in shaders {
             gl.detach_shader(program, shader);
             gl.delete_shader(shader);
@@ -169,24 +222,7 @@ fn main() {
                 return;
             }
             Event::MainEventsCleared => {
-                angle += 0.0174533;
                 gl.clear(glow::COLOR_BUFFER_BIT);
-
-                if let Some(uniform) = gl.get_uniform_location(program, "rotation_matrix") {
-                    use nalgebra_glm::{rotate, mat4, vec3};
-                    let rotation_matrix = rotate(
-                        &mat4::<f32>(
-                            1.0, 0.0, 0.0, 0.0,
-                            0.0, 1.0, 0.0, 0.0,
-                            0.0, 0.0, 1.0, 0.0,
-                            0.0, 0.0, 0.0, 1.0,
-                        ),
-                        angle,
-                        &vec3::<f32>(0.0, 0.0, 1.0),
-                    );
-
-                    gl.uniform_matrix_4_f32_slice(Some(&uniform), false, rotation_matrix.as_slice());
-                }
 
                 gl.bind_vertex_array(Some(vertex_array));
                 gl.draw_arrays(glow::TRIANGLES, 0, 3);
