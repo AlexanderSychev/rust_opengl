@@ -1,4 +1,6 @@
 pub fn gl_log_callback(source: u32, tp: u32, id: u32, severity: u32, message: &str) {
+    use log::{error, warn, info, debug};
+
     let str_source = match source {
         glow::DEBUG_SOURCE_API => "[GL_DEBUG_SOURCE_API]",
         glow::DEBUG_SOURCE_WINDOW_SYSTEM => "[GL_DEBUG_SOURCE_WINDOW_SYSTEM]",
@@ -19,13 +21,11 @@ pub fn gl_log_callback(source: u32, tp: u32, id: u32, severity: u32, message: &s
         glow::DEBUG_TYPE_OTHER => "[GL_DEBUG_TYPE_OTHER]",
         _ => "[UNKNOWN]",
     };
-    let str_severity = match severity {
-        glow::DEBUG_SEVERITY_HIGH => "[GL_DEBUG_SEVERITY_HIGH]",
-        glow::DEBUG_SEVERITY_MEDIUM => "[GL_DEBUG_SEVERITY_MEDIUM]",
-        glow::DEBUG_SEVERITY_LOW => "[GL_DEBUG_SEVERITY_LOW]",
-        glow::DEBUG_SEVERITY_NOTIFICATION => "[GL_DEBUG_SEVERITY_NOTIFICATION]",
-        _ => "[UNKNOWN]",
-    };
 
-    println!("#{} {} {} {} {}", id, str_severity, str_source, str_type, message);
+    match severity {
+        glow::DEBUG_SEVERITY_HIGH => error!("#{} {} {} {}", id, str_source, str_type, message),
+        glow::DEBUG_SEVERITY_MEDIUM => warn!("#{} {} {} {}", id, str_source, str_type, message),
+        glow::DEBUG_SEVERITY_LOW => info!("#{} {} {} {}", id, str_source, str_type, message),
+        _ => debug!("#{} {} {} {}", id, str_source, str_type, message),
+    }
 }
