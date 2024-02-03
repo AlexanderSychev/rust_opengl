@@ -1,13 +1,13 @@
 use glow::{
-    Context, HasContext, Program, UniformLocation, Shader, COMPUTE_SHADER, FRAGMENT_SHADER,
+    Context, HasContext, Program, Shader, UniformLocation, COMPUTE_SHADER, FRAGMENT_SHADER,
     GEOMETRY_SHADER, TESS_CONTROL_SHADER, TESS_EVALUATION_SHADER, VERTEX_SHADER,
 };
 use nalgebra_glm::{Mat2, Mat3, Mat4, Vec2, Vec3, Vec4};
 use simple_error::SimpleError;
+use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::borrow::Borrow;
 
 // -----------------------------------------------------------------------------
 // Shader type enumeration
@@ -117,7 +117,6 @@ pub enum GlslValue {
 // Shader manager
 // -----------------------------------------------------------------------------
 
-
 pub struct ShaderManager {
     /// OpenGL global context reference
     context: Arc<Context>,
@@ -177,7 +176,7 @@ impl ShaderManager {
 
     pub fn has_shader<Q: ?Sized>(&self, key: &Q) -> bool
     where
-        String : Borrow<Q> + Ord,
+        String: Borrow<Q> + Ord,
         Q: Ord,
     {
         self.shaders.contains_key(key)
@@ -185,7 +184,7 @@ impl ShaderManager {
 
     pub fn get_shader<Q: ?Sized>(&self, key: &Q) -> Option<&Shader>
     where
-        String : Borrow<Q> + Ord,
+        String: Borrow<Q> + Ord,
         Q: Ord,
     {
         self.shaders.get(key)
@@ -193,7 +192,7 @@ impl ShaderManager {
 
     pub fn unload_shader<Q: ?Sized>(&mut self, key: &Q)
     where
-        String : Borrow<Q> + Ord,
+        String: Borrow<Q> + Ord,
         Q: Ord,
     {
         let maybe_shader = self.shaders.get(key);
@@ -227,7 +226,10 @@ pub struct ShaderProgram {
 }
 
 impl ShaderProgram {
-    pub fn new(context: Arc<Context>, shader_manager: Arc<ShaderManager>) -> Result<ShaderProgram, SimpleError> {
+    pub fn new(
+        context: Arc<Context>,
+        shader_manager: Arc<ShaderManager>,
+    ) -> Result<ShaderProgram, SimpleError> {
         let maybe_handle = unsafe { context.create_program() };
         if let Err(err) = maybe_handle {
             return Err(SimpleError::new(err));
@@ -245,7 +247,7 @@ impl ShaderProgram {
 
     pub fn attach_shader<Q: ?Sized>(&mut self, key: &Q)
     where
-        String : Borrow<Q> + Ord,
+        String: Borrow<Q> + Ord,
         Q: Ord,
     {
         let maybe_shader = self.shader_manager.get_shader(key);

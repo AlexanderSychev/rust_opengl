@@ -140,12 +140,14 @@ fn main() {
 
         let shader_manager = {
             let mut sm = shader::ShaderManager::new(gl.clone());
-            sm
-                .load_shader("vertex", "shaders/vertex.glsl", shader::ShaderType::Vertex)
+            sm.load_shader("vertex", "shaders/vertex.glsl", shader::ShaderType::Vertex)
                 .unwrap();
-            sm
-                .load_shader("fragment", "shaders/fragment.glsl", shader::ShaderType::Fragment)
-                .unwrap();
+            sm.load_shader(
+                "fragment",
+                "shaders/fragment.glsl",
+                shader::ShaderType::Fragment,
+            )
+            .unwrap();
             Arc::new(sm)
         };
 
