@@ -1,5 +1,5 @@
 pub fn gl_log_callback(source: u32, tp: u32, id: u32, severity: u32, message: &str) {
-    use log::{error, warn, info, debug};
+    use log::{debug, error, info, warn};
 
     let str_source = match source {
         glow::DEBUG_SOURCE_API => "[GL_DEBUG_SOURCE_API]",
