@@ -7,6 +7,7 @@ use simple_error::SimpleError;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::sync::Arc;
+use std::borrow::Borrow;
 
 // -----------------------------------------------------------------------------
 // Shader type enumeration
@@ -113,38 +114,35 @@ pub enum GlslValue {
 }
 
 // -----------------------------------------------------------------------------
-// Shader program struct
+// Shader manager
 // -----------------------------------------------------------------------------
 
-pub struct ShaderProgram {
+
+pub struct ShaderManager {
+    /// OpenGL global context reference
     context: Arc<Context>,
-    program: Program,
-    linked: bool,
-    shaders: Vec<Shader>,
-    uniform_locations: BTreeMap<String, Option<UniformLocation>>,
+    // Loaded and compiled shaders
+    shaders: BTreeMap<String, Shader>,
 }
 
-impl ShaderProgram {
-    pub fn new(context: Arc<Context>) -> Result<ShaderProgram, SimpleError> {
-        let maybe_handle = unsafe { context.create_program() };
-        if let Err(err) = maybe_handle {
-            return Err(SimpleError::new(err));
-        }
-
-        Ok(ShaderProgram {
+impl ShaderManager {
+    pub fn new(context: Arc<Context>) -> ShaderManager {
+        ShaderManager {
             context,
-            program: maybe_handle.unwrap(),
-            linked: false,
-            shaders: vec![],
-            uniform_locations: BTreeMap::new(),
-        })
+            shaders: BTreeMap::new(),
+        }
     }
 
-    pub fn compile_shader<P: AsRef<std::path::Path>>(
+    pub fn load_shader<P, Q>(
         &mut self,
+        key: Q,
         filename: P,
         shader_type: ShaderType,
-    ) -> Result<(), SimpleError> {
+    ) -> Result<(), SimpleError>
+    where
+        P: AsRef<std::path::Path>,
+        String: From<Q>,
+    {
         // Read shader file
         use std::fs::read_to_string;
         let maybe_source = read_to_string(filename);
@@ -171,11 +169,90 @@ impl ShaderProgram {
                 self.context.get_shader_info_log(shader)
             }));
         }
-        unsafe { self.context.attach_shader(self.program, shader) };
 
-        self.shaders.push(shader);
+        self.shaders.insert(String::from(key), shader);
 
         Ok(())
+    }
+
+    pub fn has_shader<Q: ?Sized>(&self, key: &Q) -> bool
+    where
+        String : Borrow<Q> + Ord,
+        Q: Ord,
+    {
+        self.shaders.contains_key(key)
+    }
+
+    pub fn get_shader<Q: ?Sized>(&self, key: &Q) -> Option<&Shader>
+    where
+        String : Borrow<Q> + Ord,
+        Q: Ord,
+    {
+        self.shaders.get(key)
+    }
+
+    pub fn unload_shader<Q: ?Sized>(&mut self, key: &Q)
+    where
+        String : Borrow<Q> + Ord,
+        Q: Ord,
+    {
+        let maybe_shader = self.shaders.get(key);
+        if let Some(shader) = maybe_shader {
+            unsafe { self.context.delete_shader(*shader) };
+            self.shaders.remove(key);
+        }
+    }
+}
+
+impl Drop for ShaderManager {
+    fn drop(&mut self) {
+        for (_, shader) in &self.shaders {
+            unsafe { self.context.delete_shader(*shader) };
+        }
+        self.shaders.clear();
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Shader program
+// -----------------------------------------------------------------------------
+
+pub struct ShaderProgram {
+    context: Arc<Context>,
+    shader_manager: Arc<ShaderManager>,
+    program: Program,
+    linked: bool,
+    shaders: Vec<Shader>,
+    uniform_locations: BTreeMap<String, Option<UniformLocation>>,
+}
+
+impl ShaderProgram {
+    pub fn new(context: Arc<Context>, shader_manager: Arc<ShaderManager>) -> Result<ShaderProgram, SimpleError> {
+        let maybe_handle = unsafe { context.create_program() };
+        if let Err(err) = maybe_handle {
+            return Err(SimpleError::new(err));
+        }
+
+        Ok(ShaderProgram {
+            context,
+            shader_manager,
+            program: maybe_handle.unwrap(),
+            linked: false,
+            shaders: vec![],
+            uniform_locations: BTreeMap::new(),
+        })
+    }
+
+    pub fn attach_shader<Q: ?Sized>(&mut self, key: &Q)
+    where
+        String : Borrow<Q> + Ord,
+        Q: Ord,
+    {
+        let maybe_shader = self.shader_manager.get_shader(key);
+        if let Some(shader) = maybe_shader {
+            unsafe { self.context.attach_shader(self.program, *shader) };
+            self.shaders.push(*shader);
+        }
     }
 
     pub fn link(&mut self) -> Result<(), SimpleError> {
@@ -363,7 +440,6 @@ impl Drop for ShaderProgram {
         unsafe {
             for shader in &self.shaders {
                 self.context.detach_shader(self.program, *shader);
-                self.context.delete_shader(*shader);
             }
             self.context.delete_program(self.program);
         }

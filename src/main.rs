@@ -138,14 +138,20 @@ fn main() {
         gl.enable(glow::BLEND);
         gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
 
-        let mut program = shader::ShaderProgram::new(gl.clone()).unwrap();
+        let shader_manager = {
+            let mut sm = shader::ShaderManager::new(gl.clone());
+            sm
+                .load_shader("vertex", "shaders/vertex.glsl", shader::ShaderType::Vertex)
+                .unwrap();
+            sm
+                .load_shader("fragment", "shaders/fragment.glsl", shader::ShaderType::Fragment)
+                .unwrap();
+            Arc::new(sm)
+        };
 
-        program
-            .compile_shader("shaders/vertex.glsl", shader::ShaderType::Vertex)
-            .unwrap();
-        program
-            .compile_shader("shaders/fragment.glsl", shader::ShaderType::Fragment)
-            .unwrap();
+        let mut program = shader::ShaderProgram::new(gl.clone(), shader_manager.clone()).unwrap();
+        program.attach_shader("vertex");
+        program.attach_shader("fragment");
 
         program.link().unwrap();
 
