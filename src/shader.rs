@@ -309,15 +309,35 @@ impl ShaderProgram {
         self.linked
     }
 
-    pub fn bind_attrib_location(&self, index: u32, name: &str) {
+    pub fn bind_attrib_location(&self, index: u32, name: &str) -> Result<(), SimpleError> {
+        if self.linked {
+            return Err(SimpleError::new(
+                "Cannot bind attribute location - program already linked",
+            ));
+        }
+
         unsafe { self.context.bind_attrib_location(self.program, index, name) };
+
+        Ok(())
     }
 
-    pub fn bind_frag_data_location(&self, color_number: u32, name: &str) {
+    pub fn bind_frag_data_location(
+        &self,
+        color_number: u32,
+        name: &str,
+    ) -> Result<(), SimpleError> {
+        if self.linked {
+            return Err(SimpleError::new(
+                "Cannot bind fragment data location - program already linked",
+            ));
+        }
+
         unsafe {
             self.context
                 .bind_frag_data_location(self.program, color_number, name)
         };
+
+        Ok(())
     }
 
     pub fn set_uniform_value(&self, name: &str, value: GlslValue) {
