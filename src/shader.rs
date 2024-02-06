@@ -344,12 +344,13 @@ impl ShaderProgram {
         use glow::{FALSE as GL_FALSE, TRUE as GL_TRUE};
         use log::warn as log_warn;
 
+        // Get uniform value location index
+        if !self.uniform_locations.contains_key(name) {
+            log_warn!("Shader program has no uniform with name \"{}\"", name);
+            return;
+        }
+
         unsafe {
-            // Get uniform value location index
-            if !self.uniform_locations.contains_key(name) {
-                log_warn!("Shader program has no uniform with name \"{}\"", name);
-                return;
-            }
             let location = self.uniform_locations[name];
             let location_ref = location.as_ref();
 

@@ -102,8 +102,6 @@ impl TriangleMesh {
         let vertex_count = indices.len() as i32;
         let mut buffers: Vec<Buffer> = vec![];
 
-        println!("{:?}", normals);
-
         use bytemuck::cast_slice;
         use glow::{ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER, FLOAT, STATIC_DRAW};
 
