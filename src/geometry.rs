@@ -7,6 +7,7 @@ pub trait Drawable {
     fn render(&self);
 }
 
+#[derive(Debug)]
 pub struct TriangleMesh {
     context: Arc<Context>,
     vertex_count: i32,
@@ -45,7 +46,7 @@ impl TriangleMesh {
                 let v = side_factor * (side as f32);
                 let cv = v.cos();
                 let sv = v.sin();
-                let r = (outer_radius + inner_raduis * cv);
+                let r = outer_radius + inner_raduis * cv;
 
                 points[idx] = r * cu;
                 points[idx + 1] = r * su;
@@ -100,6 +101,8 @@ impl TriangleMesh {
     ) -> SimpleResult<TriangleMesh> {
         let vertex_count = indices.len() as i32;
         let mut buffers: Vec<Buffer> = vec![];
+
+        println!("{:?}", normals);
 
         use bytemuck::cast_slice;
         use glow::{ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER, FLOAT, STATIC_DRAW};

@@ -1,7 +1,7 @@
+use crate::geometry::Drawable;
 use glow::*;
 use glutin;
 use std::sync::Arc;
-use crate::geometry::Drawable;
 
 mod geometry;
 mod logging;
@@ -19,11 +19,47 @@ fn init_log() {
     .unwrap();
 }
 
+use nalgebra_glm::Mat4;
+
+fn init_model() -> (Mat4, Mat4, Mat4) {
+    use nalgebra_glm::{look_at, mat4, rotate, vec3};
+
+    #[rustfmt::skip]
+    let mut model = {
+        mat4::<f32>(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        )
+    };
+    model = rotate(&model, -35.0, &vec3(1.0, 0.0, 0.0));
+    model = rotate(&model, 35.0, &vec3(0.0, 1.0, 0.0));
+
+    let view = look_at::<f32>(
+        &vec3(0.0, 0.0, 2.0),
+        &vec3(0.0, 0.0, 0.0),
+        &vec3(0.0, 1.0, 0.0),
+    );
+
+    #[rustfmt::skip]
+    let projection = {
+        mat4::<f32>(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        )
+    };
+
+    (model, view, projection)
+}
+
 fn main() {
     init_log();
     use geometry::TriangleMesh;
 
-    let model = nalgebra_glm::quat_to_mat4(&nalgebra_glm::quat(1.0, 1.0, 1.0, 1.0));
+    let (model, view, projection) = init_model();
 
     unsafe {
         let (gl, window, event_loop) = {
@@ -87,6 +123,19 @@ fn main() {
 
         program.use_program().unwrap();
 
+        program.set_uniform_value(
+            "kd",
+            shader::GlslValue::Float32Vec3(nalgebra_glm::vec3(0.9, 0.5, 0.3)),
+        );
+        program.set_uniform_value(
+            "ld",
+            shader::GlslValue::Float32Vec3(nalgebra_glm::vec3(1.0, 1.0, 1.0)),
+        );
+        program.set_uniform_value(
+            "light_position",
+            shader::GlslValue::Float32Vec4(nalgebra_glm::vec4(5.0, 5.0, 2.0, 1.0)),
+        );
+
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
 
         use glutin::event::{Event, WindowEvent};
@@ -99,6 +148,27 @@ fn main() {
             Event::MainEventsCleared => {
                 gl.clear(glow::COLOR_BUFFER_BIT);
 
+                let model_view_matrix = view * model;
+                #[rustfmt::skip]
+                let normal_matrix = {
+                    nalgebra_glm::mat3(
+                        model_view_matrix.row(0)[0], model_view_matrix.row(0)[1], model_view_matrix.row(0)[2],
+                        model_view_matrix.row(1)[0], model_view_matrix.row(1)[1], model_view_matrix.row(1)[2],
+                        model_view_matrix.row(2)[0], model_view_matrix.row(2)[1], model_view_matrix.row(2)[2],
+                    )
+                };
+                program.set_uniform_value(
+                    "model_view_matrix",
+                    shader::GlslValue::Float32Mat4(model_view_matrix),
+                );
+                program.set_uniform_value(
+                    "normal_matrix",
+                    shader::GlslValue::Float32Mat3(normal_matrix),
+                );
+                program.set_uniform_value(
+                    "mvp",
+                    shader::GlslValue::Float32Mat4(projection * model_view_matrix),
+                );
                 torus.render();
 
                 window.swap_buffers().unwrap();

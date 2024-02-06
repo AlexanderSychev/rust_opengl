@@ -415,7 +415,7 @@ impl ShaderProgram {
                 let maybe_attrib = self.context.get_active_attribute(self.program, i);
                 if let Some(attrib) = maybe_attrib {
                     debug!(
-                        "[ATTRIB] #{} {:?} {}",
+                        "[ATTRIB] #{} {} {}",
                         i,
                         native_gl_value_type_to_keyword(attrib.atype),
                         attrib.name
@@ -436,7 +436,7 @@ impl ShaderProgram {
                 let maybe_uniform = self.context.get_active_uniform(self.program, i);
                 if let Some(uniform) = maybe_uniform {
                     debug!(
-                        "[UNIFORM] #{} {:?} {}",
+                        "[UNIFORM] #{} {} {}",
                         i,
                         native_gl_value_type_to_keyword(uniform.utype),
                         uniform.name
